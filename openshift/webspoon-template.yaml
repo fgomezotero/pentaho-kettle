@@ -1,0 +1,134 @@
+apiVersion: v1
+kind: Template
+metadata:
+  name: webspoon-template
+  author: "Franklin Gómez Otero"
+  annotations:
+    openshift.io/display-name: "Webspoon Pentaho Data Integration (Ephemeral)"
+    openshift.io/documentation-url: "https://github.com/HiromuHota/pentaho-kettle/wiki"
+    openshift.io/provider-display-name: "Franklin Gómez Otero"
+    description: >-
+      Spoon tool web version for ETL execution similar to the tool
+      desktop Spoon. Preloaded with a series of plugins and example of transformations (kettle files).
+      The purpose of this template is exploratory and therefore ephemeral.
+labels:
+  app: "webspoon"
+
+message: "Enjoy the tool ... Wait a few minutes for it to be ready !!!"
+
+# PARAMETERS
+parameters:
+  - name: NAME
+    description: "App name"
+    value: webspoon
+    required: true
+
+objects:
+
+# IMAGESTREAMS
+- apiVersion: v1
+  kind: ImageStream
+  metadata:
+    name: ${NAME}
+  spec:
+    dockerImageRepository:
+
+# BUILDCONFIGS
+- apiVersion: v1
+  kind: BuildConfig
+  metadata:
+    name: ${NAME}
+    annotations:
+      template.alpha.openshift.io/wait-for-ready: "true"
+  spec:
+    output:
+      to:
+        kind: ImageStreamTag
+        name: webspoon:9.0
+    source:
+      git:
+        ref: openshift
+        uri: https://github.com/fgomezotero/pentaho-kettle.git
+      type: Git
+    strategy:
+      dockerStrategy:
+        dockerfilePath: openshift/Dockerfile
+      type: Docker
+    triggers:
+      - type: "ConfigChange" 
+
+# DEPLOYMENTCONFIGS
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    annotations:
+      template.alpha.openshift.io/wait-for-ready: "true"
+    name: ${NAME}
+  spec:
+    replicas: 1
+    selector:
+      app: ${NAME}
+      deploymentconfig: ${NAME}
+    template:
+      metadata:
+        labels:
+          app: ${NAME}
+          deploymentconfig: ${NAME}
+      spec:
+        containers:
+        - image: webspoon:9.0
+          imagePullPolicy: IfNotPresent
+          name: ${NAME}
+          ports:
+          - containerPort: 8080
+            protocol: TCP
+          resources: {}
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+    test: false
+    triggers:
+    - type: ConfigChange
+    - imageChangeParams:
+        automatic: true
+        containerNames:
+        - ${NAME}
+        from:
+          kind: ImageStreamTag
+          name: webspoon:9.0
+      type: ImageChange
+
+# SERVICES
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: ${NAME}
+  spec:
+    ports:
+    - name: 8080-tcp
+      port: 8080
+      protocol: TCP
+      targetPort: 8080
+    selector:
+      app: ${NAME}
+      deploymentconfig: ${NAME}
+    sessionAffinity: None
+    type: ClusterIP
+
+# ROUTE    
+- apiVersion: v1
+  kind: Route
+  metadata:
+    annotations:
+      openshift.io/host.generated: "true"
+    name: ${NAME}
+  spec:
+    port:
+      targetPort: 8080-tcp
+    to:
+      kind: Service
+      name: ${NAME}
+      weight: 100
+    wildcardPolicy: None
