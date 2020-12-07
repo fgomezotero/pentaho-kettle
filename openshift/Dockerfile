@@ -30,12 +30,12 @@ RUN wget -q https://sourceforge.net/projects/pentaho/files/Pentaho%20$base/clien
 ARG CACHEBUST=1
 
 RUN echo "org.apache.tomcat.util.buf.UDecoder.ALLOW_ENCODED_SLASH=true" | tee -a conf/catalina.properties
-COPY --chown=tomcat:0 docker/install.sh /tmp/install.sh
+COPY docker/install.sh /tmp/install.sh
 RUN sh /tmp/install.sh
 
-ADD --chown=tomcat:0  https://github.com/HiromuHota/pentaho-kettle/releases/download/webspoon%2F$version/webspoon-security-$dist-$patch.jar ${CATALINA_HOME}/lib/
+ADD https://github.com/HiromuHota/pentaho-kettle/releases/download/webspoon%2F$version/webspoon-security-$dist-$patch.jar ${CATALINA_HOME}/lib/
 RUN echo "CLASSPATH="$CATALINA_HOME"/lib/webspoon-security-$dist-$patch.jar" | tee ${CATALINA_HOME}/bin/setenv.sh
-COPY --chown=tomcat:0 docker/catalina.policy ${CATALINA_HOME}/conf/
+COPY docker/catalina.policy ${CATALINA_HOME}/conf/
 RUN mkdir -p $HOME/.kettle/users && mkdir -p $HOME/.pentaho/users
 RUN mkdir -p $HOME/.kettle/data && cp -r ${CATALINA_HOME}/samples $HOME/.kettle/data/samples
 
