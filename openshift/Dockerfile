@@ -6,7 +6,7 @@ RUN rm -rf ${CATALINA_HOME}/webapps/* \
     && echo "<% response.sendRedirect(\"spoon\"); %>" > ${CATALINA_HOME}/webapps/ROOT/index.jsp
 
 ARG base=9.0
-ARG patch=21
+ARG patch=22
 ARG version=0.$base.$patch
 ARG dist=9.0.0.0-423
 
@@ -30,20 +30,20 @@ RUN wget -q https://sourceforge.net/projects/pentaho/files/Pentaho%20$base/clien
 ARG CACHEBUST=1
 
 RUN echo "org.apache.tomcat.util.buf.UDecoder.ALLOW_ENCODED_SLASH=true" | tee -a conf/catalina.properties
-COPY docker/install.sh /tmp/install.sh
+COPY --chown=tomcat:0 docker/install.sh /tmp/install.sh
 RUN sh /tmp/install.sh
 
-ADD  https://github.com/HiromuHota/pentaho-kettle/releases/download/webspoon%2F$version/webspoon-security-$dist-$patch.jar ${CATALINA_HOME}/lib/
+ADD --chown=tomcat:0  https://github.com/HiromuHota/pentaho-kettle/releases/download/webspoon%2F$version/webspoon-security-$dist-$patch.jar ${CATALINA_HOME}/lib/
 RUN echo "CLASSPATH="$CATALINA_HOME"/lib/webspoon-security-$dist-$patch.jar" | tee ${CATALINA_HOME}/bin/setenv.sh
-COPY docker/catalina.policy ${CATALINA_HOME}/conf/
+COPY --chown=tomcat:0 docker/catalina.policy ${CATALINA_HOME}/conf/
 RUN mkdir -p $HOME/.kettle/users && mkdir -p $HOME/.pentaho/users
 RUN mkdir -p $HOME/.kettle/data && cp -r ${CATALINA_HOME}/samples $HOME/.kettle/data/samples
 
 USER root
 
 RUN chown -R tomcat:0 /usr/local/tomcat \
-    && chmod -R g=u  ${CATALINA_HOME} \
     && chown -R tomcat:0 ${CATALINA_HOME} \
+    && chmod -R g=u  /usr/local/tomcat \
     && chmod -R g=u ${CATALINA_HOME} \
     && chmod g=u /etc/passwd
 
@@ -56,4 +56,3 @@ USER tomcat
 
 ENTRYPOINT ["/uid_entrypoint"]
 CMD ["catalina.sh","run"]
-
