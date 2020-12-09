@@ -1,6 +1,6 @@
 # brief introduction
 
-I make available a Webspoon template focused on a development or test environment for the community. We start from an ephemeral configuration that can scale as much as they want since this service is stateless
+I make available a Webspoon template focused on a development or test environment for the community. We start from an persistent configuration that can scale as much as they want since this service is stateless
 
 ## Basic usage
 

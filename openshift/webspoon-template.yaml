@@ -2,11 +2,9 @@ apiVersion: v1
 kind: Template
 metadata:
   name: webspoon-template
-  author: "Franklin Gómez Otero"
   annotations:
-    openshift.io/display-name: "Webspoon Pentaho Data Integration (Ephemeral)"
+    openshift.io/display-name: "Webspoon Pentaho Data Integration"
     openshift.io/documentation-url: "https://github.com/HiromuHota/pentaho-kettle/wiki"
-    openshift.io/provider-display-name: "Franklin Gómez Otero"
     description: >-
       Spoon tool web version for ETL execution similar to the tool
       desktop Spoon. Preloaded with a series of plugins and example of transformations (kettle files).
@@ -21,6 +19,11 @@ parameters:
   - name: NAME
     description: "App name"
     value: webspoon
+    required: true
+
+  - name: GIT_URL
+    description: "Repository containing all the artifacts required to run Webspoon in Openshift"
+    value: https://github.com/fgomezotero/pentaho-kettle.git
     required: true
 
 objects:
@@ -44,18 +47,17 @@ objects:
     output:
       to:
         kind: ImageStreamTag
-        name: webspoon:9.0
+        name: webspoon
     source:
       git:
-        ref: openshift
-        uri: https://github.com/fgomezotero/pentaho-kettle.git
+        uri: ${GIT_URL}
       type: Git
     strategy:
       dockerStrategy:
         dockerfilePath: openshift/Dockerfile
       type: Docker
     triggers:
-      - type: "ConfigChange" 
+      - type: "ConfigChange"
 
 # DEPLOYMENTCONFIGS
 - apiVersion: v1
@@ -76,19 +78,29 @@ objects:
           deploymentconfig: ${NAME}
       spec:
         containers:
-        - image: webspoon:9.0
+        - image: webspoon
           imagePullPolicy: IfNotPresent
           name: ${NAME}
           ports:
           - containerPort: 8080
             protocol: TCP
           resources: {}
+          volumeMounts:
+            - mountPath: /usr/local/tomcat/plugins
+              name: ${NAME}
+              subPath: webspoon/plugins
+            - mountPath: /home/tomcat/
+              name: ${NAME}
+              subPath: webspoon/users-data
         dnsPolicy: ClusterFirst
         restartPolicy: Always
         schedulerName: default-scheduler
         securityContext: {}
-        terminationGracePeriodSeconds: 30
-    test: false
+        volumes:
+          - name: ${NAME}-data
+            persistentVolumeClaim:
+              claimName: ${NAME}
+
     triggers:
     - type: ConfigChange
     - imageChangeParams:
@@ -97,7 +109,7 @@ objects:
         - ${NAME}
         from:
           kind: ImageStreamTag
-          name: webspoon:9.0
+          name: webspoon
       type: ImageChange
 
 # SERVICES
@@ -117,7 +129,7 @@ objects:
     sessionAffinity: None
     type: ClusterIP
 
-# ROUTE    
+# ROUTE
 - apiVersion: v1
   kind: Route
   metadata:
@@ -132,3 +144,16 @@ objects:
       name: ${NAME}
       weight: 100
     wildcardPolicy: None
+
+# PVC
+- apiVersion: v1
+  kind: PersistentVolumeClaim
+  metadata:
+    name: ${NAME}
+  spec:
+    accessModes:
+    - ReadWriteOnce
+    resources:
+      requests:
+        storage: 2Gi
+    storageClassName: openshift-apps
