@@ -47,7 +47,7 @@ objects:
     output:
       to:
         kind: ImageStreamTag
-        name: webspoon
+        name: webspoon:latest
     source:
       git:
         uri: ${GIT_URL}
@@ -87,10 +87,10 @@ objects:
           resources: {}
           volumeMounts:
             - mountPath: /usr/local/tomcat/plugins
-              name: ${NAME}
+              name: ${NAME}-data
               subPath: webspoon/plugins
             - mountPath: /home/tomcat/
-              name: ${NAME}
+              name: ${NAME}-data
               subPath: webspoon/users-data
         dnsPolicy: ClusterFirst
         restartPolicy: Always
@@ -100,7 +100,6 @@ objects:
           - name: ${NAME}-data
             persistentVolumeClaim:
               claimName: ${NAME}
-
     triggers:
     - type: ConfigChange
     - imageChangeParams:
@@ -109,7 +108,7 @@ objects:
         - ${NAME}
         from:
           kind: ImageStreamTag
-          name: webspoon
+          name: webspoon:latest
       type: ImageChange
 
 # SERVICES
